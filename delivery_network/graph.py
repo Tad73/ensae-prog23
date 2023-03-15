@@ -70,25 +70,90 @@ class Graph:
     
 
     def get_path_with_power(self, src, dest, power):
-        raise NotImplementedError
-    
+        """
+        The algorithm goes through every nodes and for each node,
+        it browses every edges thus the complexity is in O(V*E)
+        where V and E represent respectively the number of nodes and edges.
+        Only takes road with the minimal distance
+        Args:
+            src (int): the source of the road
+            dest (int): the destination of the road
+            power (int): the power of the truck
+        Returns:
+            list: Contains the different nodes which compose the road
+        """
+        resultat = [[]]
+        visit = []
+        self.min_length = float('inf')
 
-    def connected_components(self):
-        raise NotImplementedError
-
+        def route(node, current, length):
+            if node == dest:
+                if length < self.min_length:
+                    self.min_length = length
+                    resultat[0] = current
+                return None
+            if node in visit:
+                return None
+            else:
+                visit.append(node)
+                for neighbor in self.graph[node]:
+                    if neighbor[1] <= power:
+                        route(neighbor[0], current+[neighbor[0]], length + neighbor[2])
+        route(src, [src], 0)
+        if resultat[0]:
+            return resultat[0]
+        else:
+            return None
 
     def connected_components_set(self):
         """
-        The result should be a set of frozensets (one per component), 
-        For instance, for network01.in: {frozenset({1, 2, 3}), frozenset({4, 5, 6, 7})}
+        The result should be a set of frozensets (one per component),
+        For instance, for network01.in:
+        {frozenset({1, 2, 3}), frozenset({4, 5, 6, 7})}
         """
-        return set(map(frozenset, self.connected_components()))
+        result = set()
+
+        def route(node, current):
+            if node in visit:
+                return None
+            else:
+                visit.add(node)
+                for voisin in self.graph[node]:
+                    route(voisin[0], current+[voisin[0]])
+
+        for node in self.graph.keys():
+            if node not in result:
+                visit = set()
+                route(node, [node])
+                result.add(frozenset(visit))
+        return result
     
     def min_power(self, src, dest):
         """
-        Should return path, min_power. 
+        Should return path, min_power.
+        Same complexity as get_path_with_power, O(V*E)
         """
-        raise NotImplementedError
+        resultat = [[], 0]
+        self.minimal_power = float('inf')
+
+        def road(node, current, power):
+            if node == dest:
+                if self.minimal_power > power:
+                    self.minimal_power = power
+                    resultat[0] = current
+                    resultat[1] = power
+                return
+            if node in current[:len(current)-1]: 
+                return 
+            else: 
+                for neighbor in self.graph[node]:
+                    temp = max(power, neighbor[1])
+                    road(neighbor[0], current+[neighbor[0]], temp)
+        road(src, [src], 0)
+        if resultat:
+            return resultat
+        else:
+            return None
 
 
 def graph_from_file(filename):
@@ -111,17 +176,34 @@ def graph_from_file(filename):
     g: Graph
         An object of the class Graph with the graph from file_name.
     """
-    with open(filename, "r") as file:
-        n, m = map(int, file.readline().split())
-        g = Graph(range(1, n+1))
-        for _ in range(m):
-            edge = list(map(int, file.readline().split()))
-            if len(edge) == 3:
-                node1, node2, power_min = edge
-                g.add_edge(node1, node2, power_min) # will add dist=1 by default
-            elif len(edge) == 4:
-                node1, node2, power_min, dist = edge
-                g.add_edge(node1, node2, power_min, dist)
+    with open(filename, "r") as f:
+        doc = f.read()  # Picks line
+        L = doc.split('\n')  # creates graph with a good format
+        n = L[0].split(' ')[0]
+        nodes = [i+1 for i in range(int(n))]
+        g = Graph(nodes)
+        for i in range (1,len(L)):
+            values = L[i].split(' ')
+            if len(values) == 4:  # the distance is mentioned
+                node1, node1, power_min, dist = values
+                g.add_edge(int(node1), int(node2), int(power_min), int(dist))
+            elif len(values) == 3:  # no information about the distance
+                node1, node2, power_min = values
+                g.add_edge(int(node1), int(node2), int(power_min))
             else:
-                raise Exception("Format incorrect")
-    return g
+                return "error"
+        return g
+
+
+def plot_graph(g):
+    from graphviz import Source
+    t = """ graph{ """
+    visit = []
+    for clef, valeurs in g.graph.items():
+        visit.append(clef)
+        for neighbor in valeurs:
+            if neighbor[0] not in visit:
+                t += str(clef) + "--" + str(neighbor[0]) + """[label= "p = """ + str(neighbor[1]) + ";d = " + str(neighbor[2]) + """ "]""" + ";" + "\n"
+    t += """}"""
+    s = Source(t, filename="Graph.gv", format="png")
+    s.view()
