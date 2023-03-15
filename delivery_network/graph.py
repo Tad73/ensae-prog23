@@ -176,23 +176,20 @@ def graph_from_file(filename):
     g: Graph
         An object of the class Graph with the graph from file_name.
     """
-    with open(filename, "r") as f:
-        doc = f.read()  # Picks line
-        L = doc.split('\n')  # creates graph with a good format
-        n = L[0].split(' ')[0]
-        nodes = [i+1 for i in range(int(n))]
-        g = Graph(nodes)
-        for i in range (1,len(L)):
-            values = L[i].split(' ')
-            if len(values) == 4:  # the distance is mentioned
-                node1, node1, power_min, dist = values
-                g.add_edge(int(node1), int(node2), int(power_min), int(dist))
-            elif len(values) == 3:  # no information about the distance
-                node1, node2, power_min = values
-                g.add_edge(int(node1), int(node2), int(power_min))
+    with open(filename, "r") as file:
+        n, m = map(int, file.readline().split()). # picks line
+        g = Graph(range(1, n+1))
+        for _ in range(m):
+            edge = list(map(int, file.readline().split()))
+            if len(edge) == 3:  # no information about the distance, dist = 1 by default
+                node1, node2, power_min = edge
+                g.add_edge(node1, node2, power_min)
+            elif len(edge) == 4:
+                node1, node2, power_min, dist = edge
+                g.add_edge(node1, node2, power_min, dist)
             else:
-                return "error"
-        return g
+                raise Exception("Format incorrect")
+    return g
 
 
 def plot_graph(g):
