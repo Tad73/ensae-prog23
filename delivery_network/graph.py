@@ -177,7 +177,7 @@ def graph_from_file(filename):
         An object of the class Graph with the graph from file_name.
     """
     with open(filename, "r") as file:
-        n, m = map(int, file.readline().split()). # picks line
+        n, m = map(int, file.readline().split())  # picks line
         g = Graph(range(1, n+1))
         for _ in range(m):
             edge = list(map(int, file.readline().split()))
@@ -204,3 +204,89 @@ def plot_graph(g):
     t += """}"""
     s = Source(t, filename="Graph.gv", format="png")
     s.view()
+
+import numpy
+import copy
+import time
+#import graphviz
+import random
+
+
+class Union:
+    """
+    the goal of this class is to represent trees with two lists: an adjacence one and an other to know how deep are the nodes.
+
+    n_nodes: int
+       number of nodes.
+    T: list
+        The list for the trees
+    D: list
+        The list with the depth of the nodes
+    """
+    def __init__(self, n_nodes=1):
+        """
+        Initialization for the union (number of nodes, and no edges).
+        """
+        self.n_nodes = n_nodes
+        self.T = [i for i in range(n_nodes)]
+        self.D = [1 for i in range(n_nodes)]
+ 
+    def represantant(self, x):
+        """
+        This function permits to have the representant of x in the Union
+        x is a node (type=int)
+        """
+        U = self.T
+        k = x
+        while U[k] != k:
+            k = U[k]
+        return (k)
+
+    def depth(self, x):
+        a = Union.represantant(self, x)
+        return (self.D[a])
+
+    def fus(self, x, y):
+        """
+        It permits to merge the two parts of x and y
+        x,y are nodes
+        """
+        rx, ry = Union.represantant(self, x), Union.represantant(self, y)
+        Rx, Ry = Union.depth(self, x), Union.depth(self, y)
+        if Rx > Ry:
+            self.T[ry] = rx
+            self.D[rx] += 1
+        else:
+            self.T[rx] = ry
+            self.D[ry] += 1
+
+def kruskal(g):
+    """
+    Transforms a graph into a covering tree minimum using the Union_set class.
+    The complexity of this function is thank to the optimised Union_set operation in O((n+a)log(n))
+    where n is the number of nodes and a the number of edges
+
+    g is a Graph
+
+    return a Graph g0 of the minimum tree covering of g
+    """
+    n = g.nodes
+    n_nodes = g.nb_nodes
+    m = g.nb_edges
+    L = []
+    for elt1 in n:
+        adj = g.graph[elt1]
+        for elt2 in adj:
+            L.append([elt2[1], elt1-1, elt2[0]-1])
+    L.sort()
+    u = Union(n_nodes)
+    g = Graph([i+1 for i in range(n_nodes)])
+    i, j = 0, 0
+    while i < n_nodes and j < 2*m:
+        p, x, y = int(L[j][0]), L[j][1], L[j][2]
+        if Union.represantant(u, x) != Union.represantant(u, y):
+            Union.fus(u, x, y)
+            Graph.add_edge(g, x+1, y+1, p)
+            i += 1
+        j += 1
+    return (g)
