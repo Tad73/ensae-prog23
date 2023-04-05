@@ -1,3 +1,10 @@
+import numpy as np
+import copy
+import time
+import networkx as nx
+import random
+import matplotlib.pyplot as plt
+
 class Graph:
     """
     A class representing graphs as adjacency lists and implementing various algorithms on the graphs. Graphs in the class are not oriented. 
@@ -68,6 +75,19 @@ class Graph:
         self.graph[node2].append((node1, power_min, dist))
         self.nb_edges += 1
     
+    def route2(node, current, length):
+        if node == dest:
+            if length < self.min_length:
+                self.min_length = length
+                resultat[0] = current
+            return None
+        if node in visit:
+            return None
+        else:
+            visit.append(node)
+            for neighbor in self.graph[node]:
+                if neighbor[1] <= power:
+                    route2(neighbor[0], current+[neighbor[0]], length + neighbor[2])
 
     def get_path_with_power(self, src, dest, power):
         """
@@ -85,25 +105,19 @@ class Graph:
         resultat = [[]]
         visit = []
         self.min_length = float('inf')
-
-        def route(node, current, length):
-            if node == dest:
-                if length < self.min_length:
-                    self.min_length = length
-                    resultat[0] = current
-                return None
-            if node in visit:
-                return None
-            else:
-                visit.append(node)
-                for neighbor in self.graph[node]:
-                    if neighbor[1] <= power:
-                        route(neighbor[0], current+[neighbor[0]], length + neighbor[2])
-        route(src, [src], 0)
+        route2(src, [src], 0)
         if resultat[0]:
             return resultat[0]
         else:
             return None
+    
+    def route2(node, current):
+        if node in visit:
+            return None
+        else:
+            visit.add(node)
+            for voisin in self.graph[node]:
+                route(voisin[0], current+[voisin[0]])
 
     def connected_components_set(self):
         """
@@ -112,31 +126,14 @@ class Graph:
         {frozenset({1, 2, 3}), frozenset({4, 5, 6, 7})}
         """
         result = set()
-
-        def route(node, current):
-            if node in visit:
-                return None
-            else:
-                visit.add(node)
-                for voisin in self.graph[node]:
-                    route(voisin[0], current+[voisin[0]])
-
         for node in self.graph.keys():
             if node not in result:
                 visit = set()
                 route(node, [node])
                 result.add(frozenset(visit))
         return result
-    
-    def min_power(self, src, dest):
-        """
-        Should return path, min_power.
-        Same complexity as get_path_with_power, O(V*E)
-        """
-        resultat = [[], 0]
-        self.minimal_power = float('inf')
 
-        def road(node, current, power):
+    def route3(node, current, power):
             if node == dest:
                 if self.minimal_power > power:
                     self.minimal_power = power
@@ -148,8 +145,16 @@ class Graph:
             else: 
                 for neighbor in self.graph[node]:
                     temp = max(power, neighbor[1])
-                    road(neighbor[0], current+[neighbor[0]], temp)
-        road(src, [src], 0)
+                    route3(neighbor[0], current+[neighbor[0]], temp)
+    
+    def min_power(self, src, dest):
+        """
+        Should return path, min_power.
+        Same complexity as get_path_with_power, O(V*E)
+        """
+        resultat = [[], 0]
+        self.minimal_power = float('inf')
+        route3(src, [src], 0)
         if resultat:
             return resultat
         else:
@@ -160,18 +165,18 @@ def graph_from_file(filename):
     """
     Reads a text file and returns the graph as an object of the Graph class.
 
-    The file should have the following format: 
+    The file should have the following format:
         The first line of the file is 'n m'
         The next m lines have 'node1 node2 power_min dist' or 'node1 node2 power_min' (if dist is missing, it will be set to 1 by default)
         The nodes (node1, node2) should be named 1..n
         All values are integers.
 
-    Parameters: 
+    Parameters:
     -----------
     filename: str
         The name of the file
 
-    Outputs: 
+    Outputs:
     -----------
     g: Graph
         An object of the class Graph with the graph from file_name.
@@ -191,25 +196,46 @@ def graph_from_file(filename):
                 raise Exception("Format incorrect")
     return g
 
+def road(filename):
+    with open(filename, "r") as file:
+        m = int(file.readline())
+        D = {}
+        i = 0
+        for _ in range(m):
+            R = file.readline().split()
+            s, d, p = int(R[0]), int(R[1]), int(R[2])
+            D[i] = [s, d, p]
+            i += 1
+    return D
 
-def plot_graph(g):
-    from graphviz import Source
-    t = """ graph{ """
-    visit = []
-    for clef, valeurs in g.graph.items():
-        visit.append(clef)
-        for neighbor in valeurs:
-            if neighbor[0] not in visit:
-                t += str(clef) + "--" + str(neighbor[0]) + """[label= "p = """ + str(neighbor[1]) + ";d = " + str(neighbor[2]) + """ "]""" + ";" + "\n"
-    t += """}"""
-    s = Source(t, filename="Graph.gv", format="png")
-    s.view()
+def open_trucks(filename):
+    with open(filename, "r") as file:
+        m = int(file.readline())
+        D = {}
+        i = 0
+        for _ in range(m):
+            R = file.readline().split()
+            power, cost = int(R[0]), int(R[1])
+            D[i] = [power, cost]
+            i+=1
+    return D
 
-import numpy
-import copy
-import time
-#import graphviz
-import random
+def plot_graph(G):
+    g = G.graph
+    M = nx.Graph()
+    n_nodes = len(g.keys())
+    for k in range(1, n_nodes):
+        M.add_node(k)
+    for key, value in g.items():        
+        source = key
+        for neighbour in value:           
+            destination, power, distance = neighbour
+            M.add_edge(source, destination)
+    plt.figure()
+    nx.draw(M, with_labels=True)
+    plt.savefig("delivery_network/graph")
+    plt.close()
+
 
 
 class Union:
@@ -229,7 +255,7 @@ class Union:
         """
         self.n_nodes = n_nodes
         self.T = [i for i in range(n_nodes)]
-        self.D = [1 for i in range(n_nodes)]
+        self.D = [0 for i in range(n_nodes)]
  
     def represantant(self, x):
         """
@@ -237,10 +263,9 @@ class Union:
         x is a node (type=int)
         """
         U = self.T
-        k = x
-        while U[k] != k:
-            k = U[k]
-        return (k)
+        if x == self.T[x]:
+            return x
+        return (Union.represantant(self, U[x]))
 
     def depth(self, x):
         a = Union.represantant(self, x)
@@ -290,3 +315,115 @@ def kruskal(g):
             i += 1
         j += 1
     return (g)
+
+class TreeNode:
+    def __init__(self, value, parent=None, enfant=[], power=0):#puissance de l'arête avec son parent
+        self.value = value
+        self.parent = parent
+        self.enfant = enfant
+        self.power = power
+
+class Tree:
+    def __init__(self, root):
+        self.root = root
+        self.nodes = {root.value: TreeNode(root.value, root.parent, root.enfant, root.power)}
+    
+    def arbre(valeurDepart, G):
+        root = TreeNode(valeurDepart)
+        tree = Tree(root)
+        visite = set()
+        pile = [valeurDepart]
+        while len(pile) > 0:
+            value = pile.pop()
+            visite.add(value)
+            for L in G.graph[value]:
+                (nv, b, c) = L
+                if nv not in visite:
+                    pile.append(nv)
+                    tree.nodes[nv] = TreeNode(nv, value, [], b)
+                    tree.nodes[value].enfant.append(nv)
+        return tree
+
+def ancetre_commun(node1, node2, A):
+    N1 = TreeNode(node1, A.nodes[node1].parent, A.nodes[node1].enfant, A.nodes[node1].power)
+    N2 = TreeNode(node2, A.nodes[node2].parent, A.nodes[node2].enfant, A.nodes[node2].power)
+    L = []
+    n1 = N1.value
+    n2 = N2.value
+    while n1 != A.root.value:
+        L.append(N1.value)
+        N1 = A.nodes[N1.parent]
+        n1 = N1.value
+    L.append(A.root.value)
+    while n2 not in L:
+        N2 = A.nodes[N2.parent]
+        n2 = N2.value
+    return n2
+
+def power_min(node1, node2, A):
+    N1 = TreeNode(node1, A.nodes[node1].parent, A.nodes[node1].enfant, A.nodes[node1].power)
+    N2 = TreeNode(node2, A.nodes[node2].parent, A.nodes[node2].enfant, A.nodes[node2].power)
+    L = []
+    M = []
+    n1 = N1.value
+    n2 = N2.value
+    s1 = 0
+    s2 = 0
+    a_c = ancetre_commun(node1, node2, A)
+    while n1 != a_c:
+        L.append(N1.value)
+        s1 += N1.power
+        N1 = A.nodes[N1.parent]
+        n1 = N1.value
+    while n2 != a_c:
+        M.append(N2.value)
+        s2 += N2.power
+        N2 = A.nodes[N2.parent]
+        n2 = N2.value
+    L.append(a_c)
+    M.reverse()
+    traj = L + M
+    return (traj, s1 + s2)
+
+
+def trajet_possible(s, d, C, A):
+    (traj, power) = power_min(s, d, A)
+    if power <= C[0]:
+        return True
+    else:
+        return False
+
+def profit(s, d, R):
+    for i in R.keys():
+        if R[i][0] == s and R[i][1] == d:
+            return R[i][2]
+
+def rapport(s, d, R, C):
+    p = profit(s, d, R)
+    return p/C[1]
+
+def maximisation(R, T, A):
+    n = len(R)
+    m = len(T)
+    dico = {}
+    resultat = np.zeros((n, m))
+    for i in R.keys():
+        for j in T.keys():
+            if trajet_possible(R[i][0], R[i][1], T[j], A):
+                resultat[i, j] = rapport(R[i][0], R[i][1], R, T[j])
+            else:
+                resultat[i, j] = 0
+    for traj in R.keys():
+        cam = np.argmax(resultat[traj, :])
+        dico[traj] = T[cam]
+    return dico
+
+g = graph_from_file("input/network.1.in")
+g0 = kruskal(g)
+#print(g0)
+#plot_graph(g0)
+A = Tree.arbre(1, g0)
+#print(power_min(18, 6, A))
+R = road("input/routes.1.in")
+T = open_trucks("input/trucks.1.in")
+#print(maximisation(R, T, A))
