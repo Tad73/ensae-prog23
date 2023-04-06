@@ -15,7 +15,7 @@ class Graph:
         We will usually use a list of integers 1, ..., n.
     graph: dict
         A dictionnary that contains the adjacency list of each node in the form
-        graph[node] = [(neighbor1, p1, d1), (neighbor1, p1, d1), ...]
+        graph[node] = [(neighbor1, p1, d1), (neighbor2, p2, d2), ...]
         where p1 is the minimal power on the edge (node, neighbor1) and d1 is the distance on the edge
     nb_nodes: int
         The number of nodes.
@@ -417,13 +417,3 @@ def maximisation(R, T, A):
         cam = np.argmax(resultat[traj, :])
         dico[traj] = T[cam]
     return dico
-
-g = graph_from_file("input/network.1.in")
-g0 = kruskal(g)
-#print(g0)
-#plot_graph(g0)
-A = Tree.arbre(1, g0)
-#print(power_min(18, 6, A))
-R = road("input/routes.1.in")
-T = open_trucks("input/trucks.1.in")
-#print(maximisation(R, T, A))
